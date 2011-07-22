@@ -1,0 +1,7 @@
+; $Id$
+
+name = Twitter
+description = Twitter API for Drupal
+version = 6.x-dev
+core = 6.x
+package = Third-party Integration

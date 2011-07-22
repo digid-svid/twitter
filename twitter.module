@@ -1,0 +1,120 @@
+<?php
+/**
+ * @file twitter.module
+ *   Twitter API for Drupal
+ *
+ * @author Raymond Jelierse
+ */
+
+/**
+ * Implements hook_init()
+ */
+function twitter_init() {
+  drupal_set_html_head('<script src="http://platform.twitter.com/widgets.js" type="text/javascript"></script>');
+}
+
+/**
+ * Implements hook_menu()
+ */
+function twitter_menu() {
+  return array(
+    'admin/settings/twitter' => array(
+      'title' => 'Twitter',
+      'description' => 'Manage Twitter settings',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('twitter_settings_form'),
+      'access arguments' => array('administer twitter'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_perm()
+ */
+function twitter_perm() {
+  return array('administer twitter');
+}
+
+/**
+ * Implements hook_theme()
+ */
+function twitter_theme() {
+  return array(
+    'twitter_share' => array(
+      'arguments' => array('node' => NULL),
+    ),
+  );
+}
+
+/**
+ * Implements hook_nodeapi()
+ */
+function twitter_nodeapi(&$node, $operation, $data1, $data2) {
+  switch ($operation) {
+    case 'view':
+      $node->content['twitter_share'] = array(
+        '#value' => theme('twitter_share', $node),
+      );
+      $node->twitter_share_rendered = drupal_render($node->content['twitter_share']);
+      break;
+  }
+}
+
+/**
+ * Theme the Twitter Share button
+ *
+ * @return
+ *   The HTML for a Twitter Share button
+ */
+function theme_twitter_share($node) {
+  $share_string = variable_get('twitter_share_string', '');
+  if (!empty($share_string)) {
+    $share_string = token_replace_multiple($share_string, array('global' => NULL, 'node' => $node));
+  }
+  else {
+    $share_string = drupal_get_title();
+  }
+
+  $query = array(
+    'text' => $share_string,
+    'url' => url($node->path, array('absolute' => TRUE)),
+    'via' => variable_get('twitter_site_account', ''),
+    'count' => 'horizontal',
+  );
+
+  $path = 'https://www.twitter.com/share';
+
+  return sprintf('<a href="%s" class="twitter-share-button">Tweet</a>', url($path, array('query' => $query)));
+}
+
+/**
+ * Twitter settings
+ *
+ * @return
+ *   The Twitter settings form.
+ */
+function twitter_settings_form() {
+  return system_settings_form(array(
+    'twitter_site_account' => array(
+      '#type' => 'textfield',
+      '#title' => t('Site wide Twitter account'),
+      '#default_value' => variable_get('twitter_site_account', ''),
+    ),
+    'twitter_share_string' => array(
+      '#type' => 'textfield',
+      '#title' => t('Text for sharing a node via Twitter'),
+      '#default_value' => variable_get('twitter_share_string', ''),
+    ),
+    'twitter_share_string_help' => array(
+      '#type' => 'fieldset',
+      '#title' => t('Replacement patterns'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#description' => t('Use -raw replacements for text to avoid problems with HTML entities.'),
+      'help' => array(
+        '#type' => 'markup',
+        '#value' => theme('token_tree', array('node'), TRUE, TRUE),
+      ),
+    ),
+  ));
+}
